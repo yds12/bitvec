@@ -1,3 +1,5 @@
+const BLOCK_SIZE: usize = 64;
+
 pub struct BitVec {
   data: Vec<u64>,
   length: usize
@@ -12,7 +14,27 @@ impl BitVec {
   }
 
   fn add_block(self: &mut Self) {
-    self.data.insert(0, 0);
+    self.data.push(0);
+  }
+
+  fn shift_left(self: &mut Self) {
+    if self.data.len() * BLOCK_SIZE < self.length + 1 {
+      self.add_block();
+    }
+
+    let data_len = self.data.len();
+
+    for j in 0..data_len {
+      let i: usize = data_len - j - 1;
+
+      // shift left
+      self.data[i] = self.data[i] << 1;
+
+      // pull most significant element of previous block
+      if i > 0 && self.data[i - 1] & (1 << (BLOCK_SIZE - 1)) > 0 {
+        self.data[i] += 1;
+      }
+    }
   }
 
   pub fn len(self: Self) -> usize {
@@ -23,10 +45,7 @@ impl BitVec {
     if value > 1 {
       panic!("Only 0 and 1 can be pushed into BitVec.");
     }
-    if self.data.len() * 64 < self.length + 1 {
-      self.add_block();
-    }
-    self.data[0] = self.data[0] << 1;
+    self.shift_left();
     self.data[0] += value as u64;
     self.length += 1;
   }
@@ -81,7 +100,7 @@ mod tests {
   }
 
   #[test]
-  fn pushes_one_block() {
+  fn push_one_block() {
     let mut bv = BitVec::new();
     bv.push(1);
     assert_eq!(bv.data[0], 1);
@@ -114,6 +133,51 @@ mod tests {
     bv.push(0);
     bv.push(0);
     assert_eq!(bv.data[0], 148);
+  }
+
+  #[test]
+  fn push_two_blocks() {
+    let mut bv = BitVec::new();
+    bv.push(1);
+
+    for _ in 0..64 {
+      bv.push(0);
+    }
+
+    assert_eq!(bv.data[0], 0);
+    assert_eq!(bv.data[1], 1);
+
+    let mut bv = BitVec::new();
+    bv.push(0);
+
+    for _ in 0..64 {
+      bv.push(1);
+    }
+
+    assert_eq!(bv.data[0], u64::MAX);
+    assert_eq!(bv.data[1], 0);
+
+    let mut bv = BitVec::new();
+    bv.push(1);
+    bv.push(1);
+
+    for _ in 0..63 {
+      bv.push(0);
+    }
+
+    assert_eq!(bv.data[0], u64::MAX / 2 + 1);
+    assert_eq!(bv.data[1], 1);
+
+    let mut bv = BitVec::new();
+
+    for _ in 0..129 {
+      bv.push(1);
+    }
+
+    assert_eq!(bv.data.len(), 3);
+    assert_eq!(bv.data[2], 1);
+    assert_eq!(bv.data[1], u64::MAX);
+    assert_eq!(bv.data[0], u64::MAX);
   }
 }
 
