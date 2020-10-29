@@ -13,6 +13,22 @@ impl BitVec {
     }
   }
 
+  pub fn get(self: &Self, index: usize) -> u8 {
+    if self.length == 0 {
+      panic!("Cannot index into empty BitVec.");
+    }
+    let last_block_size = match self.length % BLOCK_SIZE {
+      0 => BLOCK_SIZE,
+      val => val
+    };
+    let block_index = (self.length - index - 1) / BLOCK_SIZE;
+    let el_index =
+      (BLOCK_SIZE - ((BLOCK_SIZE + index - (last_block_size - 1))
+      % BLOCK_SIZE)) % BLOCK_SIZE;
+
+    return ((self.data[block_index] >> el_index) % 2) as u8;
+  }
+
   fn add_block(self: &mut Self) {
     self.data.push(0);
   }
@@ -178,6 +194,68 @@ mod tests {
     assert_eq!(bv.data[2], 1);
     assert_eq!(bv.data[1], u64::MAX);
     assert_eq!(bv.data[0], u64::MAX);
+  }
+
+  #[test]
+  fn get() {
+    let mut bv = BitVec::new();
+    bv.push(1);
+    assert_eq!(bv.get(0), 1);
+
+    let mut bv = BitVec::new();
+    bv.push(0);
+    assert_eq!(bv.get(0), 0);
+
+    let mut bv = BitVec::new();
+    bv.push(0);
+    bv.push(1);
+    bv.push(1);
+    assert_eq!(bv.get(0), 0);
+    assert_eq!(bv.get(1), 1);
+    assert_eq!(bv.get(2), 1);
+
+    let mut bv = BitVec::new();
+
+    for _ in 0..63 {
+      bv.push(0);
+    }
+    bv.push(1);
+
+    for i in 0..63 {
+      assert_eq!(bv.get(i), 0);
+    }
+    assert_eq!(bv.get(63), 1);
+
+    let mut bv = BitVec::new();
+
+    bv.push(1);
+    for _ in 0..63 {
+      bv.push(0);
+    }
+    bv.push(1);
+
+    for i in 1..64 {
+      assert_eq!(bv.get(i), 0);
+    }
+    assert_eq!(bv.get(0), 1);
+    assert_eq!(bv.get(64), 1);
+
+    let mut bv = BitVec::new();
+
+    for _ in 0..128 {
+      bv.push(0);
+    }
+    bv.push(1);
+    bv.push(0);
+    bv.push(1);
+    bv.push(1);
+    bv.push(0);
+
+    assert_eq!(bv.get(128), 1);
+    assert_eq!(bv.get(129), 0);
+    assert_eq!(bv.get(130), 1);
+    assert_eq!(bv.get(131), 1);
+    assert_eq!(bv.get(132), 0);
   }
 }
 
