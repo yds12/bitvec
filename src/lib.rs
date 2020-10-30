@@ -1,5 +1,10 @@
 const BLOCK_SIZE: usize = 64;
 
+macro_rules! BLOCK_FMT {
+    () => ("{:064b}")
+}
+
+#[derive(Debug)]
 pub struct BitVec {
   data: Vec<u64>,
   length: usize
@@ -64,6 +69,24 @@ impl BitVec {
     self.shift_left();
     self.data[0] += value as u64;
     self.length += 1;
+  }
+
+  pub fn to_string(self: &Self) -> String {
+    if self.length == 0 {
+      return String::from("");
+    }
+
+    let last_block_size = match self.length % BLOCK_SIZE {
+      0 => BLOCK_SIZE,
+      val => val
+    };
+    let mut s = format!("{:0width$b}", self.data[self.data.len() - 1],
+      width = last_block_size);
+
+    for i in 0..(self.data.len() - 1) {
+      s = s + &(format!(BLOCK_FMT!(), self.data[self.data.len() - i - 2]));
+    }
+    s
   }
 }
 
@@ -256,6 +279,46 @@ mod tests {
     assert_eq!(bv.get(130), 1);
     assert_eq!(bv.get(131), 1);
     assert_eq!(bv.get(132), 0);
+  }
+
+  #[test]
+  fn to_string() {
+    let mut bv = BitVec::new();
+    bv.push(1);
+    bv.push(0);
+    bv.push(1);
+    bv.push(1);
+    bv.push(0);
+    assert_eq!(bv.to_string(), "10110");
+
+    let mut bv = BitVec::new();
+
+    for _ in 0..128 {
+      bv.push(0);
+    }
+    bv.push(1);
+    bv.push(0);
+    bv.push(1);
+    bv.push(1);
+    bv.push(0);
+
+    assert_eq!(bv.to_string(),
+      "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010110");
+
+    let mut bv = BitVec::new();
+
+    for _ in 0..10 {
+      bv.push(0);
+      bv.push(1);
+      bv.push(0);
+      bv.push(1);
+      bv.push(1);
+      bv.push(0);
+      bv.push(1);
+    }
+
+    assert_eq!(bv.to_string(),
+      "0101101010110101011010101101010110101011010101101010110101011010101101");
   }
 }
 
