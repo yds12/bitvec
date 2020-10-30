@@ -58,6 +58,26 @@ impl BitVec {
     }
   }
 
+  fn shift_byte_left(self: &mut Self) {
+    if self.data.len() * BLOCK_SIZE < self.length + 8 {
+      self.add_block();
+    }
+
+    let data_len = self.data.len();
+
+    for j in 0..data_len {
+      let i: usize = data_len - j - 1;
+
+      // shift left
+      self.data[i] = self.data[i] << 8;
+
+      // pull most significant elements of previous block
+      if i > 0 {
+        self.data[i] += self.data[i - 1] >> (BLOCK_SIZE - 8);
+      }
+    }
+  }
+
   pub fn len(self: Self) -> usize {
     self.length
   }
@@ -69,6 +89,12 @@ impl BitVec {
     self.shift_left();
     self.data[0] += value as u64;
     self.length += 1;
+  }
+
+  pub fn push_byte(self: &mut Self, value: u8) {
+    self.shift_byte_left();
+    self.data[0] += value as u64;
+    self.length += 8;
   }
 
   pub fn to_string(self: &Self) -> String {
@@ -319,6 +345,68 @@ mod tests {
 
     assert_eq!(bv.to_string(),
       "0101101010110101011010101101010110101011010101101010110101011010101101");
+  }
+
+  #[test]
+  fn push_byte() {
+    let mut bv = BitVec::new();
+    bv.push_byte(1);
+    bv.push_byte(1);
+    bv.push_byte(1);
+    bv.push_byte(1);
+
+    for i in 0..32 {
+      let val = if i % 8 == 7 { 1 } else { 0 };
+      assert_eq!(bv.get(i), val);
+    }
+
+    let mut bv = BitVec::new();
+    bv.push_byte(24);
+    bv.push_byte(24);
+    bv.push_byte(24);
+    bv.push_byte(24);
+
+    for i in 0..32 {
+      let val = if i % 8 == 3 || i % 8 == 4 { 1 } else { 0 };
+      assert_eq!(bv.get(i), val);
+    }
+
+    let mut bv = BitVec::new();
+    bv.push_byte(128);
+    bv.push_byte(16);
+    bv.push_byte(2);
+    bv.push_byte(64);
+    let ones = vec![0, 11, 22, 25];
+
+    for i in 0..32 {
+      let val = if ones.contains(&i) { 1 } else { 0 };
+      assert_eq!(bv.get(i), val);
+    }
+
+    let mut bv = BitVec::new();
+    bv.push_byte(128);
+
+    for _ in 0..8 {
+      bv.push_byte(0);
+    }
+
+    assert_eq!(bv.get(0), 1);
+
+    for i in 1..72 {
+      assert_eq!(bv.get(i), 0);
+    }
+
+    let mut bv = BitVec::new();
+    bv.push(1);
+    for _ in 0..8 {
+      bv.push_byte(0);
+    }
+
+    assert_eq!(bv.get(0), 1);
+
+    for i in 1..65 {
+      assert_eq!(bv.get(i), 0);
+    }
   }
 }
 
