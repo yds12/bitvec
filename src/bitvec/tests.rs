@@ -290,5 +290,29 @@ mod tests {
       assert_eq!(bv.get(i), 0);
     }
   }
+
+  #[test]
+  fn pop_empty() {
+    let mut bv = BitVec::new();
+    assert_eq!(bv.pop(), None);
+  }
+
+  #[test]
+  fn pop() {
+    let mut bv = BitVec::new();
+    bv.push(1);
+    bv.push(0);
+    bv.push(1);
+    bv.push(1);
+    bv.push(0);
+    bv.push(0);
+    assert_eq!(bv.pop().unwrap(), 0);
+    assert_eq!(bv.pop().unwrap(), 0);
+    assert_eq!(bv.pop().unwrap(), 1);
+    assert_eq!(bv.pop().unwrap(), 1);
+    assert_eq!(bv.pop().unwrap(), 0);
+    assert_eq!(bv.pop().unwrap(), 1);
+    assert_eq!(bv.pop(), None);
+  }
 }
 

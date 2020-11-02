@@ -38,6 +38,10 @@ impl BitVec {
     self.data.push(0);
   }
 
+  fn remove_block(self: &mut Self) {
+    self.data.pop();
+  }
+
   fn shift_left(self: &mut Self) {
     if self.data.len() * BLOCK_SIZE < self.length + 1 {
       self.add_block();
@@ -48,13 +52,29 @@ impl BitVec {
     for j in 0..data_len {
       let i: usize = data_len - j - 1;
 
-      // shift left
       self.data[i] = self.data[i] << 1;
 
       // pull most significant element of previous block
       if i > 0 && self.data[i - 1] & (1 << (BLOCK_SIZE - 1)) > 0 {
         self.data[i] += 1;
       }
+    }
+  }
+
+  fn shift_right(self: &mut Self) {
+    let data_len = self.data.len();
+
+    let mut carry = false;
+
+    for j in 0..data_len {
+      let i: usize = data_len - j - 1;
+
+      if carry {
+        self.data[i] += 1_u64.rotate_right(1);
+      }
+      carry = self.data[i] % 2 == 1;
+
+      self.data[i] = self.data[i] >> 1;
     }
   }
 
@@ -89,6 +109,22 @@ impl BitVec {
     self.shift_left();
     self.data[0] += value as u64;
     self.length += 1;
+  }
+
+  pub fn pop(self: &mut Self) -> Option<u8> {
+    if self.length == 0 {
+      return None;
+    }
+
+    let val = if self.data[0] % 2 == 0 { 0 } else { 1 };
+    self.shift_right();
+    self.length -= 1;
+
+    if self.length <= (self.data.len() - 1) * BLOCK_SIZE {
+      self.remove_block();
+    }
+
+    return Some(val);
   }
 
   pub fn push_byte(self: &mut Self, value: u8) {
