@@ -314,5 +314,38 @@ mod tests {
     assert_eq!(bv.pop().unwrap(), 1);
     assert_eq!(bv.pop(), None);
   }
+
+  #[test]
+  fn append_many() {
+    let mut bv = BitVec::new();
+    bv.push(1);
+    bv.append_many(0, 10);
+    bv.append_many(1, 10);
+
+    assert_eq!(bv.get(0), 1);
+
+    for i in 0..10 {
+      assert_eq!(bv.get(i + 1), 0);
+    }
+
+    for i in 0..10 {
+      assert_eq!(bv.get(i + 11), 1);
+    }
+
+    let mut bv = BitVec::new();
+    bv.push(1);
+    bv.append_many(0, 100);
+    bv.append_many(1, 100);
+
+    assert_eq!(bv.get(0), 1);
+
+    for i in 0..100 {
+      assert_eq!(bv.get(i + 1), 0);
+    }
+
+    for i in 0..100 {
+      assert_eq!(bv.get(i + 101), 1);
+    }
+  }
 }
 

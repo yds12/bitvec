@@ -22,6 +22,12 @@ impl BitVec {
     if self.length == 0 {
       panic!("Cannot index into empty BitVec.");
     }
+
+    if index >= self.length {
+      panic!("Index for BitVec out of bounds. Length: {}, index: {}",
+        self.length, index);
+    }
+
     let last_block_size = match self.length % BLOCK_SIZE {
       0 => BLOCK_SIZE,
       val => val
@@ -95,6 +101,68 @@ impl BitVec {
       if i > 0 {
         self.data[i] += self.data[i - 1] >> (BLOCK_SIZE - 8);
       }
+    }
+  }
+
+  fn shift_block_left(self: &mut Self) {
+    self.data.insert(0, 0);
+  }
+
+  fn shift_n_left(self: &mut Self, n: usize) {
+    for _ in 0..(n / BLOCK_SIZE) {
+      self.shift_block_left();
+    }
+
+    let remains = n % BLOCK_SIZE;
+
+    let last_block_size = match self.length % BLOCK_SIZE {
+      0 => BLOCK_SIZE,
+      val => val
+    };
+
+    if last_block_size + remains > BLOCK_SIZE {
+      self.add_block();
+    }
+
+    let data_len = self.data.len();
+
+    for j in 0..data_len {
+      let i: usize = data_len - j - 1;
+
+      self.data[i] = self.data[i] << remains;
+
+      // pull most significant elements of previous block
+      if i > 0 {
+        self.data[i] += self.data[i - 1] >> (BLOCK_SIZE - remains);
+      }
+    }
+
+    self.length += n;
+  }
+
+  pub fn set_block(self: &mut Self, index: usize, value: u8) {
+    if value > 1 {
+      panic!("BitVec only accepts values 0 and 1.");
+    }
+
+    self.data[index] = if value == 1 { u64::MAX } else { 0 };
+  }
+
+  pub fn append_many(self: &mut Self, value: u8, n: usize) {
+    if value > 1 {
+      panic!("BitVec only accepts values 0 and 1.");
+    }
+
+    self.shift_n_left(n);
+    let blocks = n / BLOCK_SIZE;
+    let remains = n % BLOCK_SIZE;
+
+    for i in 0..blocks {
+      self.set_block(i, value);
+    }
+
+    if value == 1 {
+      self.data[blocks] += u64::MAX >> (BLOCK_SIZE - remains);
     }
   }
 
