@@ -5,6 +5,7 @@ macro_rules! BLOCK_FMT {
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct BitVec {
   data: Vec<u64>,
   length: usize
