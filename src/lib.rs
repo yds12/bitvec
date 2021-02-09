@@ -1,3 +1,3 @@
 pub mod bitvec;
-pub use crate::bitvec::BitVec as BitVec;
+pub use crate::bitvec::BitVec;
 
