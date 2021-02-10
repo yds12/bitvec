@@ -19,6 +19,13 @@ impl BitVec {
     }
   }
 
+  pub fn from_bytes(bytes: &[u8]) -> Self {
+    BitVec {
+      data: Vec::new(),
+      length: 0
+    }
+  }
+
   pub fn get(self: &Self, index: usize) -> u8 {
     if self.length == 0 {
       panic!("Cannot index into empty BitVec.");

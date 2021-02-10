@@ -347,5 +347,12 @@ mod tests {
       assert_eq!(bv.get(i + 101), 1);
     }
   }
+
+  #[test]
+  fn from_bytes() {
+    let bytes: [u8; 3] = [0, 1, 2];
+    let bv = BitVec::from_bytes(&bytes[..]);
+    assert_eq!(bv.to_string(), "000000000000000100000010");
+  }
 }
 
