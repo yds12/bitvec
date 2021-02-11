@@ -20,10 +20,13 @@ impl BitVec {
   }
 
   pub fn from_bytes(bytes: &[u8]) -> Self {
-    BitVec {
-      data: Vec::new(),
-      length: 0
+    let mut bv = BitVec::new();
+
+    for &byte in bytes {
+      bv.push_byte(byte);
     }
+
+    bv
   }
 
   pub fn get(self: &Self, index: usize) -> u8 {
@@ -229,3 +232,4 @@ impl BitVec {
 }
 
 mod tests;
+
