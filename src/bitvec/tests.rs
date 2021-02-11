@@ -354,5 +354,12 @@ mod tests {
     let bv = BitVec::from_bytes(&bytes[..]);
     assert_eq!(bv.to_string(), "000000000000000100000010");
   }
+
+  #[test]
+  fn from_str() {
+    let some_str = "abc";
+    let bv = BitVec::from_str(some_str);
+    assert_eq!(bv.to_string(), "011000010110001001100011");
+  }
 }
 

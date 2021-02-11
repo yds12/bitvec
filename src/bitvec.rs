@@ -19,6 +19,10 @@ impl BitVec {
     }
   }
 
+  pub fn from_str(strval: &str) -> Self {
+    BitVec::from_bytes(strval.as_bytes())
+  }
+
   pub fn from_bytes(bytes: &[u8]) -> Self {
     let mut bv = BitVec::new();
 
