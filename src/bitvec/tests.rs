@@ -361,5 +361,32 @@ mod tests {
     let bv = BitVec::from_str(some_str);
     assert_eq!(bv.to_string(), "011000010110001001100011");
   }
+
+  #[test]
+  fn to_vecu8() {
+    let mut bv = BitVec::new();
+    bv.append_many(0, 8);
+    bv.append_many(1, 16);
+    let bytev = bv.to_vecu8();
+    assert_eq!(bytev, vec![0, 255, 255]);
+
+    let mut bv = BitVec::new();
+    bv.append_many(0, 8);
+    bv.append_many(1, 16);
+    bv.append_many(0, 1);
+    let bytev = bv.to_vecu8();
+    assert_eq!(bytev, vec![0, 255, 255, 0]);
+
+    let mut bv = BitVec::new();
+    bv.append_many(0, 5);
+    bv.append_many(1, 3); // 0000 0111
+    bv.append_many(0, 6);
+    bv.append_many(1, 1);
+    bv.append_many(0, 1); // 0000 0010
+    bv.push(0);
+    bv.push(1); // 0100 0000
+    let bytev = bv.to_vecu8();
+    assert_eq!(bytev, vec![7, 2, 64]);
+  }
 }
 

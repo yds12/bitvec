@@ -33,6 +33,12 @@ impl BitVec {
     bv
   }
 
+  pub fn to_vecu8(self: &Self) -> Vec<u8> {
+    let len = (self.length / 8) + ((self.length % 8 != 0) as usize);
+    let bytevec: Vec<u8> = vec![0; len];
+    bytevec
+  }
+
   pub fn get(self: &Self, index: usize) -> u8 {
     if self.length == 0 {
       panic!("Cannot index into empty BitVec.");
