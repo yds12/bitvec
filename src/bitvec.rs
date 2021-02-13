@@ -34,8 +34,47 @@ impl BitVec {
   }
 
   pub fn to_vecu8(self: &Self) -> Vec<u8> {
+//println!("");
+//println!("data: {:?}", self.data);
+//println!("bv: {}", self.to_string());
     let len = (self.length / 8) + ((self.length % 8 != 0) as usize);
-    let bytevec: Vec<u8> = vec![0; len];
+    let mut bytevec: Vec<u8> = vec![0; len];
+
+    for i in 0..len { // for each byte
+      let mut mask: u8 = 0xff;
+      let bl_idx = i / 8; // index of the data block
+      let byte_in_block = i % (BLOCK_SIZE / 8);
+
+      let shift = // how much to shift to make this the lowest byte
+        if bl_idx < self.data.len() - 1 { // not the last block
+          (7 - byte_in_block) * 8
+        } else { // last block
+          let bits_in_block = if self.length % BLOCK_SIZE == 0 {
+              BLOCK_SIZE
+            } else {
+              self.length % BLOCK_SIZE
+            };
+
+
+          if i == len - 1 {
+            let byte_size =
+              if self.length % 8 == 0 { 8 } else { self.length % 8 };
+
+            mask = (2_u32.pow(byte_size as u32) - 1) as u8;
+            0
+          } else {
+            bits_in_block - ((byte_in_block + 1) * 8)
+          }
+        };
+//println!("byte: {}", i);
+//println!("block: {}", bl_idx);
+//println!("shift: {}", shift);
+//println!("mask: 0x{:x}", mask);
+
+      bytevec[i] = (self.data[bl_idx] >> shift) as u8 & mask;
+//println!("value: {}", bytevec[i]);
+    }
+
     bytevec
   }
 
