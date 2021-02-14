@@ -1,13 +1,34 @@
-const BLOCK_SIZE: usize = 64;
+use std::mem;
 
+// TODO: make this dynamic
 macro_rules! BLOCK_FMT {
     () => ("{:064b}")
 }
 
+type BlType = u64;
+const BL_SIZE: usize = mem::size_of::<BlType>();
+
+/// This is the main struct of this crate: a vector of bits.
+///
+/// Data is represented via an underlying vector of unsigned integers.
+/// Each unsigned integer in this structure is called a "block". The
+/// first element of the bitvec is the highest bit in block 0, and so on.
+/// As the indices grow, we move right inside a block, and when a block is
+/// over we move to the next block.
+///
+/// Assuming a block size of 8, these are some examples of how some bitvecs
+/// are represented in the underlying vector of uints:
+/// bitvec:    1
+/// uint vec: [10000000], len 1
+/// bitvec:    101
+/// uint vec: [10100000], len 3
+/// bitvec:    10001000  1
+/// uint vec: [10001000, 10000000], len 9
+/// ...
 #[derive(Debug)]
 #[derive(Clone)]
 pub struct BitVec {
-  data: Vec<u64>,
+  data: Vec<BlType>,
   length: usize
 }
 
@@ -34,47 +55,8 @@ impl BitVec {
   }
 
   pub fn to_vecu8(self: &Self) -> Vec<u8> {
-//println!("");
-//println!("data: {:?}", self.data);
-//println!("bv: {}", self.to_string());
     let len = (self.length / 8) + ((self.length % 8 != 0) as usize);
-    let mut bytevec: Vec<u8> = vec![0; len];
-
-    for i in 0..len { // for each byte
-      let mut mask: u8 = 0xff;
-      let bl_idx = i / 8; // index of the data block
-      let byte_in_block = i % (BLOCK_SIZE / 8);
-
-      let shift = // how much to shift to make this the lowest byte
-        if bl_idx < self.data.len() - 1 { // not the last block
-          (7 - byte_in_block) * 8
-        } else { // last block
-          let bits_in_block = if self.length % BLOCK_SIZE == 0 {
-              BLOCK_SIZE
-            } else {
-              self.length % BLOCK_SIZE
-            };
-
-
-          if i == len - 1 {
-            let byte_size =
-              if self.length % 8 == 0 { 8 } else { self.length % 8 };
-
-            mask = (2_u32.pow(byte_size as u32) - 1) as u8;
-            0
-          } else {
-            bits_in_block - ((byte_in_block + 1) * 8)
-          }
-        };
-//println!("byte: {}", i);
-//println!("block: {}", bl_idx);
-//println!("shift: {}", shift);
-//println!("mask: 0x{:x}", mask);
-
-      bytevec[i] = (self.data[bl_idx] >> shift) as u8 & mask;
-//println!("value: {}", bytevec[i]);
-    }
-
+    let bytevec: Vec<u8> = vec![0; len];
     bytevec
   }
 
@@ -88,16 +70,10 @@ impl BitVec {
         self.length, index);
     }
 
-    let last_block_size = match self.length % BLOCK_SIZE {
-      0 => BLOCK_SIZE,
-      val => val
-    };
-    let block_index = (self.length - index - 1) / BLOCK_SIZE;
-    let el_index =
-      (BLOCK_SIZE - ((BLOCK_SIZE + index - (last_block_size - 1))
-      % BLOCK_SIZE)) % BLOCK_SIZE;
+    let bl_index = index / BL_SIZE;
+    let el_index = index % BL_SIZE;
 
-    return ((self.data[block_index] >> el_index) % 2) as u8;
+    return ((self.data[bl_index] >> (BL_SIZE - 1 - el_index)) & 1) as u8;
   }
 
   fn add_block(self: &mut Self) {
@@ -108,134 +84,33 @@ impl BitVec {
     self.data.pop();
   }
 
-  fn shift_left(self: &mut Self) {
-    if self.data.len() * BLOCK_SIZE < self.length + 1 {
-      self.add_block();
-    }
-
-    let data_len = self.data.len();
-
-    for j in 0..data_len {
-      let i: usize = data_len - j - 1;
-
-      self.data[i] = self.data[i] << 1;
-
-      // pull most significant element of previous block
-      if i > 0 && self.data[i - 1] & (1 << (BLOCK_SIZE - 1)) > 0 {
-        self.data[i] += 1;
-      }
-    }
-  }
-
-  fn shift_right(self: &mut Self) {
-    let data_len = self.data.len();
-
-    let mut carry = false;
-
-    for j in 0..data_len {
-      let i: usize = data_len - j - 1;
-
-      if carry {
-        self.data[i] += 1_u64.rotate_right(1);
-      }
-      carry = self.data[i] % 2 == 1;
-
-      self.data[i] = self.data[i] >> 1;
-    }
-  }
-
-  fn shift_byte_left(self: &mut Self) {
-    if self.data.len() * BLOCK_SIZE < self.length + 8 {
-      self.add_block();
-    }
-
-    let data_len = self.data.len();
-
-    for j in 0..data_len {
-      let i: usize = data_len - j - 1;
-
-      // shift left
-      self.data[i] = self.data[i] << 8;
-
-      // pull most significant elements of previous block
-      if i > 0 {
-        self.data[i] += self.data[i - 1] >> (BLOCK_SIZE - 8);
-      }
-    }
-  }
-
-  fn shift_block_left(self: &mut Self) {
-    self.data.insert(0, 0);
-  }
-
-  fn shift_n_left(self: &mut Self, n: usize) {
-    for _ in 0..(n / BLOCK_SIZE) {
-      self.shift_block_left();
-    }
-
-    let remains = n % BLOCK_SIZE;
-
-    let last_block_size = match self.length % BLOCK_SIZE {
-      0 => BLOCK_SIZE,
-      val => val
-    };
-
-    if last_block_size + remains > BLOCK_SIZE {
-      self.add_block();
-    }
-
-    let data_len = self.data.len();
-
-    for j in 0..data_len {
-      let i: usize = data_len - j - 1;
-
-      self.data[i] = self.data[i] << remains;
-
-      // pull most significant elements of previous block
-      if i > 0 {
-        self.data[i] += self.data[i - 1] >> (BLOCK_SIZE - remains);
-      }
-    }
-
-    self.length += n;
-  }
-
-  pub fn set_block(self: &mut Self, index: usize, value: u8) {
-    if value > 1 {
-      panic!("BitVec only accepts values 0 and 1.");
-    }
-
-    self.data[index] = if value == 1 { u64::MAX } else { 0 };
-  }
-
-  pub fn append_many(self: &mut Self, value: u8, n: usize) {
-    if value > 1 {
-      panic!("BitVec only accepts values 0 and 1.");
-    }
-
-    self.shift_n_left(n);
-    let blocks = n / BLOCK_SIZE;
-    let remains = n % BLOCK_SIZE;
-
-    for i in 0..blocks {
-      self.set_block(i, value);
-    }
-
-    if value == 1 {
-      self.data[blocks] += u64::MAX >> (BLOCK_SIZE - remains);
-    }
+  pub fn push_many(self: &mut Self, value: u8, n: usize) {
   }
 
   pub fn len(self: Self) -> usize {
     self.length
   }
 
+  /// Puts a bit at the end of the bitvec.
   pub fn push(self: &mut Self, value: u8) {
     if value > 1 {
       panic!("Only 0 and 1 can be pushed into BitVec.");
     }
-    self.shift_left();
-    self.data[0] += value as u64;
+
+    let bl_index = self.length / BL_SIZE;
+    let el_index = self.length % BL_SIZE;
+    let val = (1 as BlType) << (BL_SIZE - 1 - el_index);
+
+    if bl_index >= self.data.len() {
+      self.add_block();
+    }
+
+    if value == 1 {
+      self.data[bl_index] = self.data[bl_index] | val;
+    } else {
+      // change the new bit even if it is 0
+      self.data[bl_index] = self.data[bl_index] & (!val);
+    }
     self.length += 1;
   }
 
@@ -244,11 +119,12 @@ impl BitVec {
       return None;
     }
 
-    let val = if self.data[0] % 2 == 0 { 0 } else { 1 };
-    self.shift_right();
+    let bl_index = (self.length - 1) / BL_SIZE;
+    let el_index = (self.length - 1) % BL_SIZE;
+    let val = ((self.data[bl_index] >> (BL_SIZE - 1 - el_index)) & 1) as u8;
     self.length -= 1;
 
-    if self.length <= (self.data.len() - 1) * BLOCK_SIZE {
+    if self.length <= (self.data.len() - 1) * BL_SIZE {
       self.remove_block();
     }
 
@@ -256,9 +132,6 @@ impl BitVec {
   }
 
   pub fn push_byte(self: &mut Self, value: u8) {
-    self.shift_byte_left();
-    self.data[0] += value as u64;
-    self.length += 8;
   }
 
   pub fn to_string(self: &Self) -> String {
@@ -266,8 +139,8 @@ impl BitVec {
       return String::from("");
     }
 
-    let last_block_size = match self.length % BLOCK_SIZE {
-      0 => BLOCK_SIZE,
+    let last_block_size = match self.length % BL_SIZE {
+      0 => BL_SIZE,
       val => val
     };
     let mut s = format!("{:0width$b}", self.data[self.data.len() - 1],

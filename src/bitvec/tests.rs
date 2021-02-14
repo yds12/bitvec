@@ -316,11 +316,11 @@ mod tests {
   }
 
   #[test]
-  fn append_many() {
+  fn push_many() {
     let mut bv = BitVec::new();
     bv.push(1);
-    bv.append_many(0, 10);
-    bv.append_many(1, 10);
+    bv.push_many(0, 10);
+    bv.push_many(1, 10);
 
     assert_eq!(bv.get(0), 1);
 
@@ -334,8 +334,8 @@ mod tests {
 
     let mut bv = BitVec::new();
     bv.push(1);
-    bv.append_many(0, 100);
-    bv.append_many(1, 100);
+    bv.push_many(0, 100);
+    bv.push_many(1, 100);
 
     assert_eq!(bv.get(0), 1);
 
@@ -348,13 +348,13 @@ mod tests {
     }
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 64);
-    bv.append_many(1, 64);
+    bv.push_many(0, 64);
+    bv.push_many(1, 64);
     assert_eq!(bv.data, vec![0, u64::MAX]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 64);
-    bv.append_many(1, 64);
+    bv.push_many(0, 64);
+    bv.push_many(1, 64);
     bv.push(1);
     assert_eq!(bv.data, vec![0, u64::MAX, 1]);
   }
@@ -377,53 +377,53 @@ mod tests {
   fn combine_changes() {
     let mut bv = BitVec::new();
     bv.push(1);
-    bv.append_many(0, 64);
-    bv.append_many(1, 64);
+    bv.push_many(0, 64);
+    bv.push_many(1, 64);
     bv.push_byte(255);
     assert_eq!(bv.data, vec![1 << 63, u64::MAX >> 1, 0x1ff]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 64);
-    bv.append_many(1, 64);
+    bv.push_many(0, 64);
+    bv.push_many(1, 64);
     assert_eq!(bv.data, vec![0, u64::MAX]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 64); // eight 0 bytes
-    bv.append_many(1, 64); // eight 255 bytes
-    bv.append_many(1, 1);  // byte 1
+    bv.push_many(0, 64); // eight 0 bytes
+    bv.push_many(1, 64); // eight 255 bytes
+    bv.push_many(1, 1);  // byte 1
     assert_eq!(bv.data, vec![0, u64::MAX, 1]);
   }
 
   #[test]
   fn to_vecu8() {
     let mut bv = BitVec::new();
-    bv.append_many(0, 8);
-    bv.append_many(1, 16);
+    bv.push_many(0, 8);
+    bv.push_many(1, 16);
     let bytev = bv.to_vecu8();
     assert_eq!(bytev, vec![0, 255, 255]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 8);
-    bv.append_many(1, 16);
-    bv.append_many(0, 1);
+    bv.push_many(0, 8);
+    bv.push_many(1, 16);
+    bv.push_many(0, 1);
     let bytev = bv.to_vecu8();
     assert_eq!(bytev, vec![0, 255, 255, 0]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 5);
-    bv.append_many(1, 3); // 0000 0111
-    bv.append_many(0, 6);
-    bv.append_many(1, 1);
-    bv.append_many(0, 1); // 0000 0010
+    bv.push_many(0, 5);
+    bv.push_many(1, 3); // 0000 0111
+    bv.push_many(0, 6);
+    bv.push_many(1, 1);
+    bv.push_many(0, 1); // 0000 0010
     bv.push(0);
     bv.push(1); // 0000 0001
     let bytev = bv.to_vecu8();
     assert_eq!(bytev, vec![7, 2, 1]);
 
     let mut bv = BitVec::new();
-    bv.append_many(0, 64); // eight 0 bytes
-    bv.append_many(1, 64); // eight 255 bytes
-    bv.append_many(1, 1);  // byte 1
+    bv.push_many(0, 64); // eight 0 bytes
+    bv.push_many(1, 64); // eight 255 bytes
+    bv.push_many(1, 1);  // byte 1
     let bytev = bv.to_vecu8();
     assert_eq!(bytev, vec![0, 0, 0, 0, 0, 0, 0, 0,
       255, 255, 255, 255, 255, 255, 255, 255, 1]);
