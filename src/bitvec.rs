@@ -132,6 +132,32 @@ impl BitVec {
   }
 
   pub fn push_byte(self: &mut Self, value: u8) {
+    let bl_index = self.length / BL_SIZE;
+    let el_index = self.length % BL_SIZE;
+    let fits = self.data.len() * BL_SIZE - self.length;
+
+    if fits < 8 { // needs new block to fit a byte
+      self.add_block();
+    }
+
+    if fits < 8 && fits > 0 { // split bit in 2 parts
+      // add part that fits in the last block
+      let left = 8 - fits;
+      let shift = (BL_SIZE - fits) - el_index;
+      let part1 = ((value >> left) as BlType) << shift;
+      self.data[bl_index] += part1;
+
+      // add part that goes to the new block
+      let shift = BL_SIZE - left;
+      let part2 = (((u8::MAX >> fits) & value) << shift) as BlType;
+      self.data[bl_index + 1] += part2;
+    } else {
+      let shift = (BL_SIZE - 8) - el_index;
+      let add = (value as BlType) << shift;
+      self.data[bl_index] += add;
+    }
+
+    self.length += 8;
   }
 
   pub fn to_string(self: &Self) -> String {
