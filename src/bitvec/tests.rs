@@ -50,25 +50,29 @@ mod tests {
   fn push_one_block() {
     let mut bv = BitVec::new();
     bv.push(1);
-    assert_eq!(bv.data[0], 1);
+    assert_eq!(bv.data[0], 1 << (BL_SIZE - 1));
+    assert_eq!(bv.length, 1);
 
     let mut bv = BitVec::new();
     bv.push(1);
     bv.push(0);
-    assert_eq!(bv.data[0], 2);
+    assert_eq!(bv.data[0], 0b10 << (BL_SIZE - 2));
+    assert_eq!(bv.length, 2);
 
     let mut bv = BitVec::new();
     bv.push(1);
     bv.push(0);
     bv.push(1);
-    assert_eq!(bv.data[0], 5);
+    assert_eq!(bv.data[0], 0b101 << (BL_SIZE - 3));
+    assert_eq!(bv.length, 3);
 
     let mut bv = BitVec::new();
     bv.push(0);
     bv.push(1);
     bv.push(0);
     bv.push(1);
-    assert_eq!(bv.data[0], 5);
+    assert_eq!(bv.data[0], 0b0101 << (BL_SIZE - 4));
+    assert_eq!(bv.length, 4);
 
     let mut bv = BitVec::new();
     bv.push(1);
@@ -79,7 +83,8 @@ mod tests {
     bv.push(1);
     bv.push(0);
     bv.push(0);
-    assert_eq!(bv.data[0], 148);
+    assert_eq!(bv.data[0], 0b10010100 << (BL_SIZE - 8));
+    assert_eq!(bv.length, 8);
   }
 
   #[test]
